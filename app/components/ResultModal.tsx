@@ -13,7 +13,7 @@ export default function ResultModal({
 }: Props) {
   return (
     <div className={`${isOpen && "modal-open"} modal`}>
-      <div className="modal-box">
+      <div className="modal-box h-52">
         <h3 className="text-lg font-bold">{message}</h3>
         <p className="py-4">Do you want to start a new game?</p>
         <div className="modal-action">

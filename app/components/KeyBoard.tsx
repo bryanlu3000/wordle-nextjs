@@ -38,7 +38,8 @@ export default function KeyBoard({
 
       <div className="flex gap-1 sm:gap-2">
         <button
-          className="h-14 w-12 rounded-md bg-gray-300 text-center text-xs font-bold dark:bg-zinc-500 sm:h-16 sm:w-[75px] sm:text-sm sm:hover:bg-slate-300 sm:active:bg-slate-200 sm:dark:hover:bg-zinc-400 sm:dark:active:bg-zinc-300"
+          className="h-14 w-12 select-none rounded-md bg-gray-300 text-center text-xs font-bold active:bg-gray-400 dark:bg-zinc-500 dark:active:bg-zinc-400 sm:h-16 sm:w-[75px] sm:text-sm"
+          tabIndex={-1}
           onClick={enterClick}
         >
           ENTER
@@ -47,7 +48,8 @@ export default function KeyBoard({
         <div className="flex gap-1 sm:gap-2">{KeyRow(KEY_ROW_3)}</div>
 
         <button
-          className="h-14 w-12 rounded-md bg-gray-300 text-center text-lg dark:bg-zinc-500 sm:h-16 sm:w-[75px] sm:text-xl sm:hover:bg-slate-300 sm:active:bg-slate-200 sm:dark:hover:bg-zinc-400 sm:dark:active:bg-zinc-300"
+          className="h-14 w-12 select-none rounded-md bg-gray-300 text-center text-lg active:bg-gray-400 dark:bg-zinc-500 dark:active:bg-zinc-400 sm:h-16 sm:w-[75px] sm:text-xl"
+          tabIndex={-1}
           onClick={backspaceClick}
         >
           &#9003;

@@ -52,6 +52,24 @@ export default function Home() {
     setDanceTile(new Array(5).fill(false));
     setRegen("true");
     setIsGameOver(false);
+    setIsAllowInput(true);
+  };
+
+  const stopGame = () => {
+    // setIsAllowInput(false);
+    setIsGameOver(false);
+  };
+
+  const shakeOn = () => {
+    setShakeRow(true);
+    setIsAllowInput(false);
+  };
+
+  const shakeOff = () => {
+    setTimeout(() => {
+      setShakeRow(false);
+      setIsAllowInput(true);
+    }, 800);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -99,114 +117,127 @@ export default function Home() {
   };
 
   const enterClick = async () => {
-    if (curColIndex < 5) {
-      // Not enough letters
-      setShakeRow(true);
-      // After 800ms, set the shake toggle back to false for the next time use
-      setTimeout(() => setShakeRow(false), 800);
-      toast.error("Not enough letters!", {
-        duration: 1000,
-      });
-    } else if (isAllowInput) {
-      // convert to a guess string
-      const guess = tiles[curRowIndex].reduce(
-        (res: string, item) => res + item.text,
-        ""
-      );
-
-      const isValidWord = validateWord(guess);
-
-      if (!isValidWord) {
-        setShakeRow(true);
-        setTimeout(() => setShakeRow(false), 800);
-        toast.error("Not a valid word!", {
+    if (isAllowInput) {
+      if (curColIndex < 5) {
+        // Not enough letters
+        shakeOn();
+        // After 800ms, set the shake toggle back to false for the next time use
+        shakeOff();
+        toast.error("Not enough letters!", {
           duration: 1000,
         });
       } else {
-        const result = await fetch(`${URL}?guess=${guess}&regen=${regen}`);
-        const checkResult: CheckWordRes = await result.json();
-        // match: ("correct" | "wrongSpot" | "notExist")[];
-        const { match } = checkResult;
+        // convert to a guess string
+        const guess = tiles[curRowIndex].reduce(
+          (res: string, item) => res + item.text,
+          ""
+        );
 
-        // During tiles flipping, disable input new letters.
-        setIsAllowInput(false);
+        const isValidWord = validateWord(guess);
 
-        // use guessResult to trigger tile flipping and color change
-        for (let index = 0; index < 5; index++) {
-          setTimeout(() => {
-            setTiles((prev) =>
-              prev.map((row, i) =>
-                i === curRowIndex
-                  ? row.map((item, j) =>
-                      j === index ? { ...item, guessResult: match[j] } : item
-                    )
-                  : row
-              )
-            );
-          }, 250 * index);
-        }
-
-        // After tiles flipping, enable input new letters.
-        setTimeout(() => {
-          setIsAllowInput(true);
-        }, 2000);
-
-        // After tiles flipping, set the keyboard key color
-        // inputMatch is for keyboard key state color
-        // Key in keyboard will only change state to "correct" in case of previous state of "wrongSpot"
-        // Cannot read inputMatch right after setInputMatch
-        setTimeout(() => {
-          setInputMatch((prev) => {
-            guess.split("").forEach((letter, i) => {
-              if (!(letter in prev)) {
-                prev[letter] = match[i];
-              } else if (
-                prev[letter] === "wrongSpot" &&
-                match[i] === "correct"
-              ) {
-                prev[letter] = match[i];
-              }
-            });
-            return prev;
+        if (!isValidWord) {
+          shakeOn();
+          shakeOff();
+          toast.error("Not a valid word!", {
+            duration: 1000,
           });
-        }, 2000);
+        } else {
+          const result = await fetch(`${URL}?guess=${guess}&regen=${regen}`);
+          if (result.ok) {
+            const checkResult: CheckWordRes = await result.json();
+            // match: ("correct" | "wrongSpot" | "notExist")[];
 
-        // After tiles flipping, check if the guess is correct.
-        setTimeout(async () => {
-          if (checkResult.isCorrect) {
-            toast.success("Success! Great Job!", {
-              duration: 2000,
-              icon: "🎉",
-            });
+            const { match } = checkResult;
 
-            danceTile.forEach((item, index) => {
+            // During tiles flipping, disable input new letters.
+            setIsAllowInput(false);
+
+            // use guessResult to trigger tile flipping and color change
+            for (let index = 0; index < 5; index++) {
               setTimeout(() => {
-                setDanceTile((prev) =>
-                  prev.map((tile, i) => (i === index ? true : tile))
+                setTiles((prev) =>
+                  prev.map((row, i) =>
+                    i === curRowIndex
+                      ? row.map((item, j) =>
+                          j === index
+                            ? { ...item, guessResult: match[j] }
+                            : item
+                        )
+                      : row
+                  )
                 );
-              }, index * 100);
-            });
-
-            // After tiles dance, show modal.
-            setTimeout(() => {
-              setResultMsg("Congratulations!");
-              setIsGameOver(true);
-            }, 1000);
-          } else {
-            if (regen === "true") setRegen("false");
-
-            if (curRowIndex < 5) {
-              setCurRowIndex((prev) => prev + 1);
-              setCurColIndex(0);
-            } else {
-              const result = await fetch(`${URL}?show=true`);
-              const checkResult: CheckWordRes = await result.json();
-              const { targetWord } = checkResult;
-              setResultMsg(`The answer is "${targetWord}"`);
-              setIsGameOver(true);
+              }, 250 * index);
             }
+
+            // After tiles flipping, enable input new letters.
+            setTimeout(() => {
+              setIsAllowInput(true);
+            }, 2000);
+
+            // After tiles flipping, set the keyboard key color
+            // inputMatch is for keyboard key state color
+            // Key in keyboard will only change state to "correct" in case that previous state is "notExist" or "wrongSpot"
+            // Cannot read inputMatch right after setInputMatch
+            setTimeout(() => {
+              setInputMatch((prev) => {
+                guess.split("").forEach((letter, i) => {
+                  if (!(letter in prev)) {
+                    prev[letter] = match[i];
+                  } else if (
+                    (prev[letter] === "notExist" ||
+                      prev[letter] === "wrongSpot") &&
+                    match[i] === "correct"
+                  ) {
+                    prev[letter] = "correct";
+                  }
+                });
+                return prev;
+              });
+            }, 2000);
+
+            // After tiles flipping, check if the guess is correct.
+            setTimeout(async () => {
+              if (checkResult.isCorrect) {
+                setIsAllowInput(false);
+
+                toast.success("Success! Great Job!", {
+                  duration: 2000,
+                  icon: "🎉",
+                });
+
+                danceTile.forEach((item, index) => {
+                  setTimeout(() => {
+                    setDanceTile((prev) =>
+                      prev.map((tile, i) => (i === index ? true : tile))
+                    );
+                  }, index * 100);
+                });
+
+                // After tiles dance, show modal.
+                setTimeout(() => {
+                  setResultMsg("Congratulations!");
+                  setIsGameOver(true);
+                }, 1000);
+              } else {
+                if (regen === "true") setRegen("false");
+
+                if (curRowIndex < 5) {
+                  setCurRowIndex((prev) => prev + 1);
+                  setCurColIndex(0);
+                } else {
+                  setIsAllowInput(false);
+
+                  const result = await fetch(`${URL}?show=true`);
+                  const checkResult: CheckWordRes = await result.json();
+
+                  const { targetWord } = checkResult;
+                  setResultMsg(`The answer is "${targetWord}"`);
+                  setIsGameOver(true);
+                }
+              }
+            }, 2000);
           }
-        }, 2000);
+        }
       }
     }
   };
@@ -224,7 +255,7 @@ export default function Home() {
         isOpen={isGameOver}
         message={resultMsg}
         yesCallback={resetGame}
-        noCallback={() => setIsGameOver(false)}
+        noCallback={stopGame}
       />
 
       <section className="grid grid-cols-5 place-content-center place-items-center gap-1.5 sm:gap-2">
