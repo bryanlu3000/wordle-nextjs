@@ -17,7 +17,7 @@ export default function Key({ text, keysGuessRes, handleClick }: Props) {
   const guessResult = text in keysGuessRes ? keysGuessRes[text] : null;
   return (
     <button
-      className={`h-14 w-8 select-none rounded-md text-center text-lg font-bold sm:h-16 sm:w-12  ${
+      className={`h-14 w-8 select-none rounded-md text-center text-lg font-bold focus:outline-none sm:h-16 sm:w-12 ${
         guessResult
           ? keyBgColor[guessResult]
           : "bg-gray-300 active:bg-gray-400 dark:bg-zinc-500 dark:active:bg-zinc-400"
