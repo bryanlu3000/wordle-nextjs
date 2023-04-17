@@ -12,7 +12,7 @@ interface Tile {
   guessResult: KeyMatch;
 }
 
-const URL = "http://localhost:3000/api/checkword";
+const URL = "api/checkword";
 // const GRID_ROWS = 6;
 // const GRID_COLS = 5;
 
