@@ -19,13 +19,17 @@ export async function GET(request: Request) {
     targetWord: null,
   };
 
-  if (sessionId) {
-    if (regen === "true") {
-      const index = Math.floor(Math.random() * targetWordList.length);
-      target[sessionId] = targetWordList[index];
-    }
+  if (!sessionId) {
+    return NextResponse.json({ message: "No valid sessionId" });
+  }
 
-    if (show === "true" && sessionId in target) {
+  if (regen === "true") {
+    const index = Math.floor(Math.random() * targetWordList.length);
+    target[sessionId] = targetWordList[index];
+  }
+
+  if (sessionId in target) {
+    if (show === "true") {
       resp.targetWord = target[sessionId];
       return NextResponse.json(resp);
     }
@@ -62,8 +66,6 @@ export async function GET(request: Request) {
       // console.log("answer: " + target[sessionId]);
       // console.log("guess: " + guess);
     }
-    return NextResponse.json(resp);
-  } else {
-    return NextResponse.json({ message: "No valid sessionId" });
   }
+  return NextResponse.json(resp);
 }
