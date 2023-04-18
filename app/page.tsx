@@ -156,6 +156,8 @@ export default function Home() {
           if (result.ok) {
             const checkResult: CheckWordRes = await result.json();
 
+            console.log(checkResult);
+
             // match: ("correct" | "wrongSpot" | "notExist")[];
             const { match } = checkResult;
 
