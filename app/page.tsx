@@ -138,7 +138,7 @@ export default function Home() {
         if (!isValidWord) {
           shakeOn();
           shakeOff();
-          toast.error("Not a valid word!", {
+          toast.error("Not in word list!", {
             duration: 1000,
           });
         } else {
@@ -236,6 +236,10 @@ export default function Home() {
                 }
               }
             }, 2000);
+          } else {
+            toast.error("No response from the server!", {
+              duration: 1000,
+            });
           }
         }
       }
