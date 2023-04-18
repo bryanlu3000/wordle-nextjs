@@ -248,6 +248,11 @@ export default function Home() {
                 }
               }
             }, 2000);
+          } else {
+            console.log(result);
+            toast.error("No response from server!", {
+              duration: 1000,
+            });
           }
         }
       }
