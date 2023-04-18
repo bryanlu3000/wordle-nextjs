@@ -151,7 +151,8 @@ export default function Home() {
           });
         } else {
           const result = await fetch(
-            `${URL}?sessionId=${sessionId}&guess=${guess}&regen=${regen}`
+            `${URL}?sessionId=${sessionId}&guess=${guess}&regen=${regen}`,
+            { next: { revalidate: 60 } }
           );
           if (result.ok) {
             const checkResult: CheckWordRes = await result.json();
