@@ -6,6 +6,7 @@ import KeyBoard from "./components/KeyBoard";
 import Tile from "./components/Tile";
 import ResultModal from "./components/ResultModal";
 import validateWord from "@/lib/validateWord";
+import { useLocalStorage } from "./hooks/useLocalStorage";
 
 interface Tile {
   text: string;
@@ -17,6 +18,13 @@ const URL = "/api/checkword";
 // const GRID_COLS = 5;
 
 export default function Home() {
+  const initialSessionId = Math.floor(Math.random() * 1000000);
+  const [sessionId, setSessionId] = useLocalStorage<string>(
+    "sessionId",
+    initialSessionId.toString()
+  );
+  // console.log(`sessionId is ${sessionId}`);
+
   const mainRef = useRef<HTMLElement>(null);
 
   const arr2D: Tile[][] = new Array(6);
@@ -142,11 +150,13 @@ export default function Home() {
             duration: 1000,
           });
         } else {
-          const result = await fetch(`${URL}?guess=${guess}&regen=${regen}`);
+          const result = await fetch(
+            `${URL}?sessionId=${sessionId}&guess=${guess}&regen=${regen}`
+          );
           if (result.ok) {
             const checkResult: CheckWordRes = await result.json();
-            // match: ("correct" | "wrongSpot" | "notExist")[];
 
+            // match: ("correct" | "wrongSpot" | "notExist")[];
             const { match } = checkResult;
 
             // During tiles flipping, disable input new letters.
@@ -227,7 +237,9 @@ export default function Home() {
                 } else {
                   setIsAllowInput(false);
 
-                  const result = await fetch(`${URL}?show=true`);
+                  const result = await fetch(
+                    `${URL}?sessionId=${sessionId}&show=true`
+                  );
                   const checkResult: CheckWordRes = await result.json();
 
                   const { targetWord } = checkResult;
@@ -236,10 +248,6 @@ export default function Home() {
                 }
               }
             }, 2000);
-          } else {
-            toast.error("No response from the server!", {
-              duration: 1000,
-            });
           }
         }
       }
