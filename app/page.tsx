@@ -157,8 +157,8 @@ export default function Home() {
             duration: 1000,
           });
         } else {
-          console.log(targetWord);
-          console.log(guess);
+          // console.log(targetWord);
+          // console.log(guess);
 
           const checkResult: CheckWordRes = verifyGuess(guess, targetWord);
           const { match } = checkResult;
