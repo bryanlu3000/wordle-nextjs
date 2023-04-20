@@ -1,56 +1,66 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import toast from "react-hot-toast";
 import KeyBoard from "./components/KeyBoard";
 import Tile from "./components/Tile";
 import ResultModal from "./components/ResultModal";
 import validateWord from "@/lib/validateWord";
+import randomWord from "@/lib/randomWord";
+import verifyGuess from "@/lib/verifyGuess";
 import { useLocalStorage } from "./hooks/useLocalStorage";
 
-interface Tile {
+type Tile = {
   text: string;
   guessResult: KeyMatch;
-}
-
-const URL = "/api/checkword";
-// const GRID_ROWS = 6;
-// const GRID_COLS = 5;
+};
 
 export default function Home() {
-  const initialSessionId = Math.floor(Math.random() * 1000000);
-  const [sessionId, setSessionId] = useLocalStorage<string>(
-    "sessionId",
-    initialSessionId.toString()
-  );
-  // console.log(`sessionId is ${sessionId}`);
-
   const mainRef = useRef<HTMLElement>(null);
 
   const arr2D: Tile[][] = new Array(6);
-
   for (let i = 0; i < arr2D.length; i++) {
     arr2D[i] = new Array(5).fill({ text: "", guessResult: null });
   }
 
-  const [tiles, setTiles] = useState(arr2D);
-  const [curRowIndex, setCurRowIndex] = useState(0);
-  const [curColIndex, setCurColIndex] = useState(0);
-  const [inputMatch, setInputMatch] = useState<{ [key: string]: KeyMatch }>({});
-  const [regen, setRegen] = useState("true");
+  const [tiles, setTiles] = useLocalStorage<Tile[][]>("tiles", arr2D);
+  const [curRowIndex, setCurRowIndex] = useLocalStorage<number>(
+    "curRowIndex",
+    0
+  );
+  const [curColIndex, setCurColIndex] = useLocalStorage<number>(
+    "curColIndex",
+    0
+  );
+  const [inputMatch, setInputMatch] = useLocalStorage<GuessMatch>(
+    "inputMatch",
+    {}
+  );
+  const [targetWord, setTargetWord] = useLocalStorage<string>("targetWord", "");
+  const [isNewGame, setIsNewGame] = useLocalStorage<boolean>("isNewGame", true);
+  const [isOpenModal, setIsOpenModal] = useLocalStorage<boolean>(
+    "isOpenModal",
+    false
+  );
+  const [resultMsg, setResultMsg] = useLocalStorage<string>("resultMsg", "");
 
   const [shakeRow, setShakeRow] = useState(false);
+  const [isAllowInput, setIsAllowInput] = useState(true);
   const [danceTile, setDanceTile] = useState<boolean[]>(
     new Array(5).fill(false)
   );
-  const [isGameOver, setIsGameOver] = useState(false);
-  const [resultMsg, setResultMsg] = useState("");
-  const [isAllowInput, setIsAllowInput] = useState(true);
 
   // set focus to main element to receive keyboard event
   useEffect(() => {
     mainRef.current?.focus();
   }, []);
+
+  // Cannot use useEffect here, or the targetWord will change on window refresh
+  useMemo(() => {
+    if (isNewGame) {
+      setTargetWord(randomWord());
+    }
+  }, [isNewGame]);
 
   const resetGame = () => {
     setTiles(arr2D);
@@ -58,26 +68,21 @@ export default function Home() {
     setCurColIndex(0);
     setInputMatch({});
     setDanceTile(new Array(5).fill(false));
-    setRegen("true");
-    setIsGameOver(false);
+    setIsNewGame(true);
+    setIsOpenModal(false);
     setIsAllowInput(true);
-  };
-
-  const stopGame = () => {
-    // setIsAllowInput(false);
-    setIsGameOver(false);
+    setResultMsg("");
   };
 
   const shakeOn = () => {
     setShakeRow(true);
-    setIsAllowInput(false);
   };
 
   const shakeOff = () => {
     setTimeout(() => {
       setShakeRow(false);
       setIsAllowInput(true);
-    }, 800);
+    }, 1000);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -124,8 +129,10 @@ export default function Home() {
     }
   };
 
-  const enterClick = async () => {
+  const enterClick = () => {
     if (isAllowInput) {
+      setIsAllowInput(false);
+
       if (curColIndex < 5) {
         // Not enough letters
         shakeOn();
@@ -150,113 +157,83 @@ export default function Home() {
             duration: 1000,
           });
         } else {
-          const result = await fetch(
-            `${URL}?sessionId=${sessionId}&guess=${guess}&regen=${regen}`,
-            { next: { revalidate: 60 } }
-          );
-          if (result.ok) {
-            const checkResult: CheckWordRes = await result.json();
+          console.log(targetWord);
+          console.log(guess);
 
-            console.log(checkResult);
+          const checkResult: CheckWordRes = verifyGuess(guess, targetWord);
+          const { match } = checkResult;
 
-            // match: ("correct" | "wrongSpot" | "notExist")[];
-            const { match } = checkResult;
-
-            // During tiles flipping, disable input new letters.
-            setIsAllowInput(false);
-
-            // use guessResult to trigger tile flipping and color change
-            for (let index = 0; index < 5; index++) {
-              setTimeout(() => {
-                setTiles((prev) =>
-                  prev.map((row, i) =>
-                    i === curRowIndex
-                      ? row.map((item, j) =>
-                          j === index
-                            ? { ...item, guessResult: match[j] }
-                            : item
-                        )
-                      : row
-                  )
-                );
-              }, 250 * index);
-            }
-
-            // After tiles flipping, enable input new letters.
+          // use guessResult to trigger tile flipping and color change
+          for (let index = 0; index < 5; index++) {
             setTimeout(() => {
-              setIsAllowInput(true);
-            }, 2000);
-
-            // After tiles flipping, set the keyboard key color
-            // inputMatch is for keyboard key state color
-            // Key in keyboard will only change state to "correct" in case that previous state is "notExist" or "wrongSpot"
-            // Cannot read inputMatch right after setInputMatch
-            setTimeout(() => {
-              setInputMatch((prev) => {
-                guess.split("").forEach((letter, i) => {
-                  if (!(letter in prev)) {
-                    prev[letter] = match[i];
-                  } else if (
-                    (prev[letter] === "notExist" ||
-                      prev[letter] === "wrongSpot") &&
-                    match[i] === "correct"
-                  ) {
-                    prev[letter] = "correct";
-                  }
-                });
-                return prev;
-              });
-            }, 2000);
-
-            // After tiles flipping, check if the guess is correct.
-            setTimeout(async () => {
-              if (checkResult.isCorrect) {
-                setIsAllowInput(false);
-
-                toast.success("Success! Great Job!", {
-                  duration: 2000,
-                  icon: "🎉",
-                });
-
-                danceTile.forEach((item, index) => {
-                  setTimeout(() => {
-                    setDanceTile((prev) =>
-                      prev.map((tile, i) => (i === index ? true : tile))
-                    );
-                  }, index * 100);
-                });
-
-                // After tiles dance, show modal.
-                setTimeout(() => {
-                  setResultMsg("Congratulations!");
-                  setIsGameOver(true);
-                }, 1000);
-              } else {
-                if (regen === "true") setRegen("false");
-
-                if (curRowIndex < 5) {
-                  setCurRowIndex((prev) => prev + 1);
-                  setCurColIndex(0);
-                } else {
-                  setIsAllowInput(false);
-
-                  const result = await fetch(
-                    `${URL}?sessionId=${sessionId}&show=true`
-                  );
-                  const checkResult: CheckWordRes = await result.json();
-
-                  const { targetWord } = checkResult;
-                  setResultMsg(`The answer is "${targetWord}"`);
-                  setIsGameOver(true);
-                }
-              }
-            }, 2000);
-          } else {
-            console.log(result);
-            toast.error("No response from server!", {
-              duration: 1000,
-            });
+              setTiles((prev) =>
+                prev.map((row, i) =>
+                  i === curRowIndex
+                    ? row.map((item, j) =>
+                        j === index ? { ...item, guessResult: match[j] } : item
+                      )
+                    : row
+                )
+              );
+            }, 200 * index);
           }
+
+          // After tiles flipping, set the keyboard key color
+          // Key in keyboard will only change state to "correct" in case that previous state is "notExist" or "wrongSpot"
+          // Cannot read inputMatch right after setInputMatch
+          setTimeout(() => {
+            setInputMatch((prev) => {
+              guess.split("").forEach((letter, i) => {
+                if (!(letter in prev)) {
+                  prev[letter] = match[i];
+                } else if (
+                  (prev[letter] === "notExist" ||
+                    prev[letter] === "wrongSpot") &&
+                  match[i] === "correct"
+                ) {
+                  prev[letter] = "correct";
+                }
+              });
+              // inputMatch is an object, its referense is transferred as the argument.
+              // If only return prev, the inputMatch reference does not change, which will not trigger the useEffect in useLocalStorage to write value into localStorage
+              return { ...prev };
+            });
+          }, 1800);
+
+          // After tiles flipping, check if the guess is correct.
+          setTimeout(async () => {
+            if (checkResult.isCorrect) {
+              toast.success("Success! Great Job!", {
+                duration: 2000,
+                icon: "🎉",
+              });
+
+              // Tile dance
+              danceTile.forEach((item, index) => {
+                setTimeout(() => {
+                  setDanceTile((prev) =>
+                    prev.map((tile, i) => (i === index ? true : tile))
+                  );
+                }, index * 100);
+              });
+
+              // After tiles dance, show modal.
+              setTimeout(() => {
+                setResultMsg("Congratulations!");
+                setIsOpenModal(true);
+              }, 1000);
+            } else {
+              if (curRowIndex < 5) {
+                setIsNewGame(false);
+                setCurRowIndex((prev) => prev + 1);
+                setCurColIndex(0);
+                setIsAllowInput(true);
+              } else {
+                setResultMsg(`The answer is "${targetWord}"`);
+                setIsOpenModal(true);
+              }
+            }
+          }, 2000);
         }
       }
     }
@@ -272,10 +249,9 @@ export default function Home() {
       <h1 className="text-2xl font-bold sm:p-4 sm:text-5xl">Wordle</h1>
 
       <ResultModal
-        isOpen={isGameOver}
+        isOpen={isOpenModal}
         message={resultMsg}
         yesCallback={resetGame}
-        noCallback={stopGame}
       />
 
       <section className="grid grid-cols-5 place-content-center place-items-center gap-1.5 sm:gap-2">

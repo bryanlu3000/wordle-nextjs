@@ -4,7 +4,7 @@ interface Props {
   letterClick: (letter: string) => void;
   backspaceClick: () => void;
   enterClick: () => void;
-  inputMatch: { [key: string]: KeyMatch };
+  inputMatch: GuessMatch;
 }
 
 const KEY_ROW_1 = ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"];

@@ -1,6 +1,6 @@
 interface Props {
   text: string;
-  keysGuessRes: { [key: string]: KeyMatch };
+  keysGuessRes: GuessMatch;
   handleClick: (letter: string) => void;
 }
 
@@ -15,6 +15,7 @@ export default function Key({ text, keysGuessRes, handleClick }: Props) {
   };
 
   const guessResult = text in keysGuessRes ? keysGuessRes[text] : null;
+  // (text as keyof GuessMatch) in keysGuessRes ? keysGuessRes[text] : null;
   return (
     <button
       className={`h-14 w-8 select-none rounded-md text-center text-lg font-bold focus:outline-none sm:h-16 sm:w-12 ${
